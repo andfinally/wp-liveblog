@@ -19,10 +19,7 @@ let formHandler = (e) => {
 	data.content = e.target.querySelector('[name=wp-liveblog-content]').value || '';
 	data.status = 'publish';
 	data.type = 'wp_liveblog_post';
-	// data.terms = ['wp_liveblog_instance'] = ['xxx'];
-	// data.terms['wp_liveblog_instance'] = 3;
-	// data.terms['xxx'] = 'xxx';
-	data.wp_liveblog_instance = 1;
+	data.wp_liveblog_instance = '888';
 	let request = new XMLHttpRequest();
 	request.onload = (event) => {
 		console.log(event.target.response)

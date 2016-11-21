@@ -24,13 +24,29 @@ class WP_Liveblog {
 			add_shortcode( 'wp_liveblog', array( $this, 'shortcode' ) );
 		} );
 
-//		function allow_post_type( $allowed_post_types ) {
-//			$allowed_post_types[] = 'wp_liveblog_post';
-//
-//			return $allowed_post_types;
-//		}
-//
-//		add_filter( 'rest_api_allowed_post_types', 'allow_post_type' );
+		// Allow wp rest api to update our custom taxonomy
+		add_action( 'rest_api_init', function () {
+			register_rest_field( 'wp_liveblog_post',
+				'wp_liveblog_instance',
+				array(
+					'get_callback'    => function ( $object, $field_name, $request ) {
+						return get_the_terms( $object['id'], $field_name );
+						//return get_post_meta( $object['id'], $field_name );
+					},
+					'update_callback' => function ( $value, $object, $field_name ) {
+						if ( ! $value || ! is_string( $value ) ) {
+							return;
+						}
+
+						return wp_set_object_terms( $object->ID, strip_tags( $value ), $field_name );
+					},
+					'schema'          => array(
+						'description' => __( 'Instance of WP Liveblog this post belongs to', 'wp-liveblog' ),
+						'type'        => 'string',
+						'context'     => array( 'view', 'edit' ),
+					),
+				) );
+		} );
 	}
 
 	public function enqueue_scripts() {
@@ -46,7 +62,7 @@ class WP_Liveblog {
 		);
 	}
 
-	public function shortcode( $atts = [ ], $content = null ) {
+	public function shortcode( $atts = [], $content = null ) {
 		$this->shortcode_instance ++;
 		$html = '';
 		$this->enqueue_scripts();
@@ -56,11 +72,11 @@ class WP_Liveblog {
 				<input type="hidden" name="wp-liveblog-instance" id="<?php echo esc_attr( 'wp-liveblog-instance-' . $this->shortcode_instance ); ?>" value="<?php esc_attr( $this->shortcode_instance ); ?>">
 				<div>
 					<label for="wp-liveblog-title"><?php esc_html_e( 'Title', 'wp-liveblog' ); ?></label>
-					<input type="text" name="wp-liveblog-title" id="<?php echo esc_attr( 'wp-liveblog-title-' . $this->shortcode_instance ); ?>" required aria-required="true">
+					<input type="text" name="wp-liveblog-title" id="<?php echo esc_attr( 'wp-liveblog-title-' . $this->shortcode_instance ); ?>" requireds aria-required="true">
 				</div>
 				<div>
 					<label for="wp-liveblog-excerpt"><?php esc_html_e( 'Excerpt', 'wp-liveblog' ); ?></label>
-					<textarea rows="2" cols="20" name="wp-liveblog-excerpt" id="<?php echo esc_attr( 'wp-liveblog-excerpt-' . $this->shortcode_instance ); ?>" required aria-required="true"></textarea>
+					<textarea rows="2" cols="20" name="wp-liveblog-excerpt" id="<?php echo esc_attr( 'wp-liveblog-excerpt-' . $this->shortcode_instance ); ?>" requireds aria-required="true"></textarea>
 				</div>
 				<div>
 					<label for="wp-liveblog-content"><?php esc_html_e( 'Content', 'wp-liveblog' ); ?></label>
@@ -146,11 +162,11 @@ class WP_Liveblog {
 			'wp_liveblog_instance',
 			'wp_liveblog_post',
 			array(
-				'hierarchical' => true,
+				'hierarchical' => false,
 				'label'        => 'WP Liveblog Instance',
 				'query_var'    => true,
 				'rewrite'      => array(
-					'slug'       => 'wp-liveblog-instance',
+					'slug'       => 'wp_liveblog_instance',
 					'with_front' => false,
 				),
 				'show_in_rest' => true,
