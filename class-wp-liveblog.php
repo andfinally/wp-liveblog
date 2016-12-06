@@ -3,6 +3,9 @@
 /**
  * Class WP_Liveblog
  * Base class for the plugin
+ *
+ * https://public-api.wordpress.com/rest/v1.1/sites/humbleself.com%2Fwp/posts?type=wp_liveblog_post
+ *
  */
 class WP_Liveblog {
 
@@ -47,6 +50,20 @@ class WP_Liveblog {
 					),
 				) );
 		} );
+
+		// Filter for default post type query in WP_REST_Posts_Controller
+		add_filter( 'rest_wp_liveblog_post_query', function ( $args, $request ) {
+			$query_params = $request->get_query_params();
+			if ( ! empty( $query_params['wp_liveblog_instance'] ) ) {
+				$args['wp_liveblog_instance'] = $query_params['wp_liveblog_instance'][0];
+			}
+
+//			echo '/*';
+//			print_r($args);
+//			echo '*/';
+
+			return $args;
+		}, 10, 2 );
 	}
 
 	public function enqueue_scripts() {
@@ -60,35 +77,6 @@ class WP_Liveblog {
 				'current_user_id' => get_current_user_id()
 			)
 		);
-	}
-
-	public function shortcode( $atts = [], $content = null ) {
-		$this->shortcode_instance ++;
-		$html = '';
-		$this->enqueue_scripts();
-		if ( is_user_logged_in() && current_user_can( 'edit_posts' ) ) {
-			ob_start(); ?>
-			<form class="wp-liveblog-form" id="<?php echo esc_attr( 'wp-liveblog-form-' . $this->shortcode_instance ); ?>">
-				<input type="hidden" name="wp-liveblog-instance" id="<?php echo esc_attr( 'wp-liveblog-instance-' . $this->shortcode_instance ); ?>" value="<?php esc_attr( $this->shortcode_instance ); ?>">
-				<div>
-					<label for="wp-liveblog-title"><?php esc_html_e( 'Title', 'wp-liveblog' ); ?></label>
-					<input type="text" name="wp-liveblog-title" id="<?php echo esc_attr( 'wp-liveblog-title-' . $this->shortcode_instance ); ?>" requireds aria-required="true">
-				</div>
-				<div>
-					<label for="wp-liveblog-excerpt"><?php esc_html_e( 'Excerpt', 'wp-liveblog' ); ?></label>
-					<textarea rows="2" cols="20" name="wp-liveblog-excerpt" id="<?php echo esc_attr( 'wp-liveblog-excerpt-' . $this->shortcode_instance ); ?>" requireds aria-required="true"></textarea>
-				</div>
-				<div>
-					<label for="wp-liveblog-content"><?php esc_html_e( 'Content', 'wp-liveblog' ); ?></label>
-					<textarea rows="10" cols="20" name="wp-liveblog-content" id="<?php echo esc_attr( 'wp-liveblog-content-' . $this->shortcode_instance ); ?>"></textarea>
-				</div>
-				<input type="submit" value="<?php echo esc_attr_e( 'Submit', 'wp-liveblog' ); ?>">
-			</form>
-			<?php
-			$html .= ob_get_clean();
-		}
-
-		return $html;
 	}
 
 	private function register_custom_post_type() {
@@ -123,12 +111,7 @@ class WP_Liveblog {
 				'revisions',
 				'custom-fields',
 			),
-			// You can associate this CPT with a taxonomy or custom taxonomy.
 			'taxonomies'          => array( 'wp_liveblog_instance', 'category', 'post_tag' ),
-			/* A hierarchical CPT is like Pages and can have
-			* Parent and child items. A non-hierarchical CPT
-			* is like Posts.
-			*/
 			'hierarchical'        => false,
 			'public'              => true,
 			'show_ui'             => true,
@@ -137,6 +120,7 @@ class WP_Liveblog {
 			'show_in_admin_bar'   => true,
 			'show_in_rest'        => true,
 			'rest_base'           => 'wp_liveblog_posts',
+			//'rest_controller_class' => 'WP_Liveblog_Posts_Controller',
 			'menu_position'       => 5,
 			'can_export'          => true,
 			'has_archive'         => true,
@@ -158,20 +142,49 @@ class WP_Liveblog {
 	}
 
 	private function register_taxonomy() {
-		register_taxonomy(
-			'wp_liveblog_instance',
-			'wp_liveblog_post',
-			array(
-				'hierarchical' => false,
-				'label'        => 'WP Liveblog Instance',
-				'query_var'    => true,
-				'rewrite'      => array(
-					'slug'       => 'wp_liveblog_instance',
-					'with_front' => false,
-				),
-				'show_in_rest' => true,
-			)
+
+		$args = array(
+			'hierarchical' => false,
+			'label'        => 'WP Liveblog Instances',
+			'show_ui'      => true,
+			'query_var'    => true,
+			'rewrite'      => array( 'slug' => 'wp_liveblog_instance' ),
+			'show_in_rest' => true,
+			'rest_base'    => 'wp_liveblog_instance',
 		);
+
+		register_taxonomy( 'wp_liveblog_instance', array( 'wp_liveblog_post' ), $args );
+
+	}
+
+
+	public function shortcode( $atts = [ ], $content = null ) {
+		$this->shortcode_instance ++;
+		$html = '';
+		$this->enqueue_scripts();
+		if ( is_user_logged_in() && current_user_can( 'edit_posts' ) ) {
+			ob_start(); ?>
+			<form class="wp-liveblog-form" id="<?php echo esc_attr( 'wp-liveblog-form-' . $this->shortcode_instance ); ?>">
+				<input type="hidden" name="wp-liveblog-instance" id="<?php echo esc_attr( 'wp-liveblog-instance-' . $this->shortcode_instance ); ?>" value="<?php esc_attr( $this->shortcode_instance ); ?>">
+				<div>
+					<label for="wp-liveblog-title"><?php esc_html_e( 'Title', 'wp-liveblog' ); ?></label>
+					<input type="text" name="wp-liveblog-title" id="<?php echo esc_attr( 'wp-liveblog-title-' . $this->shortcode_instance ); ?>" requireds aria-required="true">
+				</div>
+				<div>
+					<label for="wp-liveblog-excerpt"><?php esc_html_e( 'Excerpt', 'wp-liveblog' ); ?></label>
+					<textarea rows="2" cols="20" name="wp-liveblog-excerpt" id="<?php echo esc_attr( 'wp-liveblog-excerpt-' . $this->shortcode_instance ); ?>" requireds aria-required="true"></textarea>
+				</div>
+				<div>
+					<label for="wp-liveblog-content"><?php esc_html_e( 'Content', 'wp-liveblog' ); ?></label>
+					<textarea rows="10" cols="20" name="wp-liveblog-content" id="<?php echo esc_attr( 'wp-liveblog-content-' . $this->shortcode_instance ); ?>"></textarea>
+				</div>
+				<input type="submit" value="<?php echo esc_attr_e( 'Submit', 'wp-liveblog' ); ?>">
+			</form>
+			<?php
+			$html .= ob_get_clean();
+		}
+
+		return $html;
 	}
 }
 

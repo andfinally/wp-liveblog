@@ -14,4 +14,5 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 define( 'WP_LIVEBLOG_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'WP_LIVEBLOG_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 
-require_once( WP_LIVEBLOG_PLUGIN_DIR . 'class.wp-liveblog.php' );
+require_once( WP_LIVEBLOG_PLUGIN_DIR . 'class-wp-liveblog.php' );
+require_once( WP_LIVEBLOG_PLUGIN_DIR . 'class-wp-liveblog-posts-controller.php' );
